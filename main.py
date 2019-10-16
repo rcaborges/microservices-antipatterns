@@ -5,8 +5,12 @@ import json
 import os.path
 import numpy as np
 import pandas as pd
+from network import *
+import re
 
 result = []
+endpoints = []
+versions = []
 
 def walktree(top, callback, file_type):
     '''recursively descend the directory tree rooted at top,
@@ -29,8 +33,24 @@ def walktree(top, callback, file_type):
     
 
 def parsefile(filename):
-    file = open(filename, 'r') 
+    file = open(filename, 'r')
+
+    # hard coded endpoint
     for line in file:
+        if re.findall(r'(?:\d{1,3}\.)+(?:\d{1,3})', line):
+            reg = re.findall(r'(?:\d{1,3}\.)+(?:\d{1,3})', line)
+            for item in reg:
+                if len(item.split(".")) == 4:
+                    endpoints.append([filename[filename.rfind("/")+1:],item])
+                elif len(item.split(".")) == 3:
+                    versions.append([filename[filename.rfind("/")+1:],item])
+
+        #if "class" in line.split(" ") and "(" in line:
+        #    print(line)
+        #    #matchObj = re.match( r'(.*) class (.*?) .*', line, re.M|re.I)
+        #    obj = line[line.index("class")+6:line.index("(")]
+        #    #result.append([filename[filename.rfind("/")+1:],matchObj.group(2)])
+        #    result.append([filename[filename.rfind("/")+1:],obj])
         if line.split(" ")[0] == "import":
             import_name = [filename[filename.rfind("/")+1:],line.split(" ")[1].replace(";","").replace('\n','')]
             result.append(import_name)
@@ -41,5 +61,12 @@ def visitfile(file,file_type,dir):
             return parsefile(file)	
 
 if __name__ == '__main__':
-    walktree(sys.argv[1], visitfile, 'java')
-    print(pd.DataFrame(data=result, columns=['file_name','import_name']))
+    walktree(sys.argv[1], visitfile, 'py')
+    print("ENDPOINTS")
+    for endpoint in endpoints:
+        print(endpoint)
+    print("VERSIONS")
+    for version in versions:
+        print(version)
+    df = pd.DataFrame(data=result, columns=['file_name','import_name'])
+    build_network(df, "file_name", "import_name")
