@@ -8,7 +8,7 @@ import pandas as pd
 from network import *
 import re
 
-result = []
+imports = []
 endpoints = []
 versions = []
 
@@ -53,7 +53,7 @@ def parsefile(filename):
         #    result.append([filename[filename.rfind("/")+1:],obj])
         if line.split(" ")[0] == "import":
             import_name = [filename[filename.rfind("/")+1:],line.split(" ")[1].replace(";","").replace('\n','')]
-            result.append(import_name)
+            imports.append(import_name)
 
 def visitfile(file,file_type,dir):
     if not file.startswith('.'):
@@ -68,5 +68,8 @@ if __name__ == '__main__':
     print("VERSIONS")
     for version in versions:
         print(version)
-    df = pd.DataFrame(data=result, columns=['file_name','import_name'])
-    build_network(df, "file_name", "import_name")
+    print("IMPORTS")
+    for import in imports:
+        print(import)
+    #df = pd.DataFrame(data=result, columns=['file_name','import_name'])
+    #build_network(df, "file_name", "import_name")
