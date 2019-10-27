@@ -13,6 +13,14 @@ endpoints = []
 versions = []
 classes = []
 class_calls = []
+methods = []
+method_calls = []
+
+forb_words = ['labels','run','name','delete','build','now','set','bom','service','options',
+              'main','fetch','value','error','write','read','filename','execute','passed',
+              'calls','git','new','next','registry','family','smc','origin','factory','ObjectType'
+              'load','failed','issues','data','deploy','repos','get','count','git_dir','metrics'
+              'compare','upstream','gradle']
 
 def walktree(top, callback, file_type, pre_pro):
     '''recursively descend the directory tree rooted at top,
@@ -31,7 +39,6 @@ def walktree(top, callback, file_type, pre_pro):
         else:
             # Unknown file type, print a message
             print('Skipping %s' % pathname)
-#    print([x for x in imports if x != []])
     
 
 def parsefile(filename, pre_pro):
@@ -48,17 +55,31 @@ def parsefile(filename, pre_pro):
                 elif len(item.split(".")) == 3:
                     versions.append([filename[filename.rfind("/")+1:],item])
 
+#        # FUNCTION CALL
+#        if re.findall(r'[a-zA-Z]+\([^\)]*\)(\.[^\)]*\))?', line):
+#            print(line)
+#            print(re.findall(r'(?:\d{1,3}\.)+(?:\d{1,3})', line))
+#            input()
+
+#        # METHODS
+#        if line.lstrip().split(" ")[0] == "def" and pre_pro:
+#            method_name = line.lstrip().split(" ")[1][:line.lstrip().split(" ")[1].index("(")]
+#            #classes.append([filename[filename.rfind("/")+1:],class_name])
+#            methods.append(method_name)
+#        if line.lstrip().split(" ")[0] != "def" and not pre_pro and "(" in line:
+#            if [e for e in methods if e in line.replace("("," ").replace(")"," ").replace("["," ").split(" ")]:
+#                intersect = [e for e in methods if e in line.replace("("," ").replace(")"," ").replace("["," ").split(" ")]
+#                method_calls.append([filename[filename.rfind("/")+1:],intersect[0]])
+
         # CLASS
         if line.split(" ")[0] == "class" and pre_pro:
             class_name = line.split(" ")[1][:line.lstrip().split(" ")[1].index("(")]
             #classes.append([filename[filename.rfind("/")+1:],class_name])
             classes.append(class_name)
-        if not pre_pro:
-            if all(item in classes for item in line.replace("("," ").replace(")"," ").split(" ")):
-                print(classes)
-                print(line)
-                input()
-                classes_calls.append([filename[filename.rfind("/")+1:],class_name])
+        if line.lstrip().split(" ")[0] != "class" and not pre_pro and "(" in line:
+            if [e for e in classes if e in line.replace("("," ").replace(")"," ").replace("["," ").split(" ")]:
+                intersect = [e for e in classes if e in line.replace("("," ").replace(")"," ").replace("["," ").split(" ")]
+                class_calls.append([filename[filename.rfind("/")+1:],intersect[0]])
 
 
         # IMPORTS
@@ -73,17 +94,26 @@ def visitfile(file,file_type,dir, pre_pro):
 
 if __name__ == '__main__':
     walktree(sys.argv[1], visitfile, 'py', True)
-    print(classes)
-    input()
+
+    methods = list(set(methods))
+    methods = [x for x in methods if x not in forb_words]
+
+    classes = list(set(classes))
+    print(len(classes))
+    classes = [x for x in classes if x not in forb_words]
+    print(len(classes))
+
     walktree(sys.argv[1], visitfile, 'py', False)
+    
     print("ENDPOINTS")
     for endpoint in endpoints:
         print(endpoint)
-    print("VERSIONS")
-    for version in versions:
-        print(version)
-    #print("IMPORTS")
-    #for importi in imports:
-    #    print(importi)
-    df = pd.DataFrame(data=imports, columns=['file_name','import_name'])
-    build_network(df, "file_name", "import_name")
+#    print("VERSIONS")
+#    for version in versions:
+#        print(version)
+#    print("IMPORTS")
+#    for importi in imports:
+#        print(importi)
+
+    df = pd.DataFrame(data=class_calls, columns=['file_name','class_name'])
+    build_network(df, "file_name", "class_name")
