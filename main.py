@@ -17,13 +17,8 @@ single_methods = []
 single_method_calls = []
 class_methods = []
 class_method_calls = []
-curr_class = ""
-
-#forb_words = ['labels','run','name','delete','build','now','set','bom','service','options',
-#              'main','fetch','value','error','write','read','filename','execute','passed',
-#              'calls','git','new','next','registry','family','smc','origin','factory','ObjectType'
-#              'load','failed','issues','data','deploy','repos','get','count','git_dir','metrics'
-#              'compare','upstream','gradle']
+meths_args = []
+#cls_args = []
 
 forb_words = ['run','name','delete','build','now','set','service']
 
@@ -48,7 +43,6 @@ def walktree(top, callback, file_type, pre_pro):
 
 def parsefile(filename, pre_pro):
     file = open(filename, 'r')
-
     for line in file:
 
         if re.findall(r'(?:\d{1,3}\.)+(?:\d{1,3})', line) and not pre_pro:
@@ -64,8 +58,9 @@ def parsefile(filename, pre_pro):
         # CLASS
         if line.split(" ")[0] == "class" and pre_pro:
             class_name = line.split(" ")[1][:line.lstrip().split(" ")[1].index("(")]
+            #arguments = line.lstrip()[line.lstrip().index("(")+1:line.lstrip().index(")")]
             classes.append(class_name)
-            #curr_class = class_name
+            #cls_args.append([class_name,len(arguments)])
         # CLASS OCCURRENCE
         if line.lstrip().split(" ")[0] != "class" and not pre_pro and "(" in line:
             if [e for e in classes if e in line.replace("("," ").replace(")"," ").replace("["," ").split(" ")]:
@@ -76,7 +71,9 @@ def parsefile(filename, pre_pro):
         # SINGLE METHODS
         if line.split(" ")[0] == "def" and pre_pro and re.findall(r'[a-zA-Z]+\([^\)]*\)(\.[^\)]*\))?', line):
             method_name = line.lstrip().split(" ")[1][:line.lstrip().split(" ")[1].index("(")]
+            arguments = line.lstrip()[line.lstrip().index("(")+1:line.lstrip().index(")")]
             single_methods.append(method_name)
+            meths_args.append([method_name,arguments.count(',')])
         # CLASS METHODS
         elif "def" in line.split(" ")  and pre_pro and re.findall(r'[a-zA-Z]+\([^\)]*\)(\.[^\)]*\))?', line):
             method_name = line.lstrip().split(" ")[1][:line.lstrip().split(" ")[1].index("(")]
@@ -105,37 +102,63 @@ if __name__ == '__main__':
     walktree(sys.argv[1], visitfile, 'py', True)
 
     # removing elected forbidden terms
+    print("INNAPROPRIATE NAMED METHODS (PRESS ANY KEY TO CONTINUE):")
     smethods = list(set(single_methods))
-    print(len(smethods))
     filt_smethods = [x for x in smethods if x not in forb_words]
-    print(len(filt_smethods))
     print(list(set(smethods)-set(filt_smethods)))
+    input()
+
+    # check maximun name length
+    print("LONG NAMED METHODS:")
+    [print(a) for a in smethods if len(a)>30]
+    input()
 
     # removing elected forbidden terms
+    print("INNAPROPRIATE NAMED CLASSES:")
     classes = list(set(classes))
-    print(len(classes))
     filt_classes = [x for x in classes if x not in forb_words]
-    print(len(classes))
     print(list(set(classes)-set(filt_classes)))
+    input()
+
+    # check maximun name length
+    print("LONG NAMED CLASSES:")
+    [print(a) for a in classes if len(a)>30]
+    input()
+
+    # too many parameters
+    print("TOO BIG INTERFACE:")
+    [print(a) for a in meths_args if a[1]>3]
+    input()
 
     # filling methods and classes calls
     walktree(sys.argv[1], visitfile, 'py', False)
     
     print("ENDPOINTS")
     print(len(endpoints))
+    input()
     print("VERSIONS")
     print(len(versions))
+    input()
 
     df_class = pd.DataFrame(data=class_calls)
     df_smethod = pd.DataFrame(data=single_method_calls)
     df_import = pd.DataFrame(data=imports)
 
     #TODO
-    # check methods and classes with big names
-    # check services that have repeated entries in the df
     # associate each class_method to its class, and check a general profile for classes
+
+    print("METHODS ASSOCIATED TO TOO MANY FILES:")
+    mgdf = df_smethod.groupby(['method_name']).count()
+    print(mgdf[mgdf['file_name'] > 30])
+    input()
+    
+    print("CLASSES ASSOCIATED TO TOO MANY FILES:")
+    cgdf = df_class.groupby(['class_name']).count()
+    print(cgdf[cgdf['file_name'] > 30])
+    input()
 
     print("IMPORTS")
     print(len(set(df_import['import_name'].values)))
+    input()
 
-    #build_network(df, "file_name", "class_name")
+    build_network(df_class, "file_name", "class_name")
